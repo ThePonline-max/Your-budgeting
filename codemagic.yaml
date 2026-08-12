@@ -8,6 +8,8 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
+      xcode: latest # Ensures Xcode 15+ is used for Capacitor 6
+      cocoapods: default
       groups:
         - apple_credentials
       vars:
@@ -44,12 +46,15 @@ workflows:
         script: |
           npx cap sync ios
 
-      - name: Set iOS deployment target to 15
+      - name: Set iOS deployment target to 15 in all project files
         script: |
           PBX="ios/App/App.xcodeproj/project.pbxproj"
           PLIST="ios/App/App/Info.plist"
+          PODFILE="ios/App/Podfile"
 
+          # Update project.pbxproj, Info.plist, and Podfile together
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' "$PBX"
+          sed -i '' 's/platform :ios, .*/platform :ios, '\''15.0'\''/g' "$PODFILE"
 
           /usr/libexec/PlistBuddy -c "Set :MinimumOSVersion 15.0" "$PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string 15.0" "$PLIST"
