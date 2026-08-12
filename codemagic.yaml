@@ -16,7 +16,9 @@ workflows:
       node: 18
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: |
+          npm install
+          npm install @capgo/native-purchases
       - name: Prepare web assets
         script: |
           mkdir -p www
