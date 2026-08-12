@@ -1232,8 +1232,9 @@
             <div class="overlay-content" onclick="event.stopPropagation()">
                 <div style="font-size:40px;margin-bottom:12px">✨</div>
                 <div class="overlay-title">Upgrade to PRO</div>
-                <div class="overlay-text">Unlock Reports, Goals, Debt Tracker, Net Worth, Forecast, Bills Manager, and Currency Converter with £2.99/month.</div>
-                <button class="btn btn-primary" onclick="App.activatePro()">Activate PRO</button>
+                <div class="overlay-text" id="proOverlayText">Unlock Reports, Goals, Debt Tracker, Net Worth, Forecast, Bills Manager, and Currency Converter with £2.99/month.</div>
+                <button class="btn btn-primary" id="proActivateBtn" onclick="App.activatePro()">Activate PRO</button>
+                <button class="btn btn-outline" onclick="App.restorePurchases()" style="margin-top:8px">Restore Purchases</button>
                 <button class="btn btn-outline" onclick="App.closeProDirect()" style="margin-top:8px">Maybe Later</button>
             </div>
         </div>
@@ -2514,11 +2515,150 @@
                 document.getElementById("proOverlay").className = "overlay";
             }
 
-            function activatePro() {
-                data.isPro = true;
-                saveData();
-                updateLocks();
-                document.getElementById("proOverlay").className = "overlay";
+            // ===================== STOREKIT / IAP =====================
+            var PRO_PRODUCT_ID = "com.thep.budgeting.pro";
+            var PURCHASE_TYPE_SUBS = "subs";
+            var proPriceString = "£2.99/month";
+
+            function getNativePurchases() {
+                try {
+                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativePurchases) {
+                        return window.Capacitor.Plugins.NativePurchases;
+                    }
+                } catch (e) {}
+                return null;
+            }
+
+            function isNativeIOS() {
+                try {
+                    return window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios";
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            async function loadProPrice() {
+                var NP = getNativePurchases();
+                if (!NP || !isNativeIOS()) return;
+                try {
+                    var res = await NP.getProducts({
+                        productIdentifiers: [PRO_PRODUCT_ID],
+                        productType: PURCHASE_TYPE_SUBS
+                    });
+                    if (res.products && res.products.length > 0) {
+                        proPriceString = res.products[0].priceString + " / month";
+                        var textEl = document.getElementById("proOverlayText");
+                        if (textEl) {
+                            textEl.innerHTML =
+                                "Unlock Reports, Goals, Debt Tracker, Net Worth, Forecast, Bills Manager, and Currency Converter with <strong>" +
+                                proPriceString +
+                                "</strong>.";
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Could not load product price:", e);
+                }
+            }
+
+            async function checkProEntitlement() {
+                var NP = getNativePurchases();
+                if (!NP || !isNativeIOS()) {
+                    updateLocks();
+                    return;
+                }
+                try {
+                    var result = await NP.getPurchases({ productType: PURCHASE_TYPE_SUBS });
+                    var purchases = result.purchases || [];
+                    var hasActive = false;
+                    for (var i = 0; i < purchases.length; i++) {
+                        var p = purchases[i];
+                        if (p.productIdentifier === PRO_PRODUCT_ID && p.isActive) {
+                            hasActive = true;
+                            break;
+                        }
+                    }
+                    data.isPro = hasActive;
+                    saveData();
+                    updateLocks();
+                } catch (e) {
+                    console.error("Entitlement check failed:", e);
+                    updateLocks();
+                }
+            }
+
+            async function activatePro() {
+                var btn = document.getElementById("proActivateBtn");
+                var originalText = btn ? btn.textContent : "Activate PRO";
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Processing…";
+                }
+
+                var NP = getNativePurchases();
+
+                if (!NP || !isNativeIOS()) {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                    // Fallback for web / simulator without plugin: keep old local unlock for testing
+                    if (!window.Capacitor || (window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "web")) {
+                        data.isPro = true;
+                        saveData();
+                        updateLocks();
+                        document.getElementById("proOverlay").className = "overlay";
+                        alert("PRO activated (local test mode – native StoreKit not available).");
+                    } else {
+                        alert("In-App Purchases are only available in the iOS App Store version of the app.");
+                    }
+                    return;
+                }
+
+                try {
+                    var transaction = await NP.purchaseProduct({
+                        productIdentifier: PRO_PRODUCT_ID,
+                        productType: PURCHASE_TYPE_SUBS
+                    });
+                    console.log("Purchase success:", transaction);
+                    data.isPro = true;
+                    saveData();
+                    updateLocks();
+                    document.getElementById("proOverlay").className = "overlay";
+                    alert("Welcome to PRO! All features unlocked.");
+                } catch (e) {
+                    console.error("Purchase error:", e);
+                    var msg = (e && (e.message || e.errorMessage)) ? (e.message || e.errorMessage) : String(e);
+                    var lower = msg.toLowerCase();
+                    if (lower.indexOf("cancel") === -1 && lower.indexOf("user cancelled") === -1) {
+                        alert("Purchase could not be completed.\n\n" + msg);
+                    }
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                }
+            }
+
+            async function restorePurchases() {
+                var NP = getNativePurchases();
+                if (!NP || !isNativeIOS()) {
+                    alert("Restore Purchases is only available in the iOS app.");
+                    return;
+                }
+                try {
+                    await NP.restorePurchases();
+                    await checkProEntitlement();
+                    if (data.isPro) {
+                        document.getElementById("proOverlay").className = "overlay";
+                        alert("Purchases restored. PRO is now active.");
+                    } else {
+                        alert("No active PRO subscription was found for this Apple ID.");
+                    }
+                } catch (e) {
+                    console.error("Restore failed:", e);
+                    alert("Restore failed: " + (e.message || e));
+                }
             }
 
             // ===================== HELPERS =====================
@@ -2569,6 +2709,20 @@
                         // Older browsers may not support addEventListener on matchMedia
                     }
                 }
+
+                // StoreKit: check entitlement + load live price
+                checkProEntitlement();
+                loadProPrice();
+
+                // Listen for StoreKit transaction updates (iOS)
+                try {
+                    var NP = getNativePurchases();
+                    if (NP && isNativeIOS() && NP.addListener) {
+                        NP.addListener("transactionUpdated", function() {
+                            checkProEntitlement();
+                        });
+                    }
+                } catch (e) {}
             }
 
             // ===================== EXPOSE API =====================
@@ -2671,6 +2825,7 @@ window.App = {
                 closePro: closePro,
                 closeProDirect: closeProDirect,
                 activatePro: activatePro,
+                restorePurchases: restorePurchases,
                 setTheme: setTheme
             };
 
