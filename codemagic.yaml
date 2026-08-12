@@ -1,65 +1,119 @@
 workflows:
   ios-build:
-    name: iOS Build
+    name: Your Budgeting - iOS Build
     max_build_duration: 60
     instance_type: mac_mini_m2
+
     integrations:
       app_store_connect: Codemagic
+
     environment:
       groups:
         - apple_credentials
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.thep.budgeting
       vars:
         BUNDLE_ID: com.thep.budgeting
       node: 18
+
+    ios_signing:
+      distribution_type: app_store
+      bundle_identifier: com.thep.budgeting
+
     scripts:
+      - name: Clean previous generated files
+        script: |
+          rm -rf ios
+          rm -rf www
+          rm -rf node_modules
+          rm -f package-lock.json
+
       - name: Install dependencies
         script: |
           npm install
-          npm install @capgo/native-purchases
+
       - name: Prepare web assets
         script: |
           mkdir -p www
-          cp index.html www/
+          test -f index.html
+          cp index.html www/index.html
+
       - name: Add iOS platform
-        script: npx cap add ios
-      - name: Sync Capacitor
-        script: npx cap sync ios
+        script: |
+          npx cap add ios
+
+      - name: Sync Capacitor and native plugins
+        script: |
+          npx cap sync ios
+
       - name: Set iOS deployment target to 15
         script: |
-          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' ios/App/App.xcodeproj/project.pbxproj
-          /usr/libexec/PlistBuddy -c "Set :MinimumOSVersion 15.0" ios/App/App/Info.plist 2>/dev/null || true
+          PBX="ios/App/App.xcodeproj/project.pbxproj"
+          PLIST="ios/App/App/Info.plist"
+
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' "$PBX"
+
+          /usr/libexec/PlistBuddy -c "Set :MinimumOSVersion 15.0" "$PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string 15.0" "$PLIST"
+
       - name: Enable iPad support
         script: |
-          /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:1 integer 2" ios/App/App/Info.plist
+          PLIST="ios/App/App/Info.plist"
+
+          /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:1 integer 2" "$PLIST"
+
       - name: Replace app icons
         script: |
           ICON_DEST="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          rm -f "$ICON_DEST"/*.png "$ICON_DEST/Contents.json"
+
+          test -d "$ICON_DEST"
+          rm -f "$ICON_DEST"/*.png
+          rm -f "$ICON_DEST/Contents.json"
+
           cp assets/icons/ios/*.png "$ICON_DEST/"
           cp assets/icons/ios/Contents.json "$ICON_DEST/"
+
           echo "App icons replaced successfully"
-      - name: Update version
+
+      - name: Update version and build number
         script: |
+          PLIST="ios/App/App/Info.plist"
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" "$PLIST"
+
           BUILD_NUM=$(date +%Y%m%d%H%M)
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "$PLIST"
+
+          echo "Version: 1.0.0"
+          echo "Build: $BUILD_NUM"
+
       - name: Pod install
-        script: cd ios/App && pod install
+        script: |
+          cd ios/App
+          pod install --repo-update
+
       - name: Set up code signing
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
-      - name: Build iOS app
-        script: xcode-project build-ipa --workspace "ios/App/App.xcworkspace" --scheme "App"
+
+      - name: Verify Capacitor and plugin versions
+        script: |
+          npm list @capacitor/core @capacitor/ios @capgo/native-purchases
+          grep -n "PRODUCT_BUNDLE_IDENTIFIER" ios/App/App.xcodeproj/project.pbxproj || true
+
+      - name: Build iOS IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App"
+
     artifacts:
       - build/ios/ipa/*.ipa
+
     publishing:
       app_store_connect:
         auth: integration
