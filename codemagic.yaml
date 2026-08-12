@@ -8,17 +8,16 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
-      xcode: latest # Ensures Xcode 15+ is used for Capacitor 6
+      xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.thep.budgeting
       groups:
         - apple_credentials
       vars:
         BUNDLE_ID: com.thep.budgeting
       node: 18
-
-    ios_signing:
-      distribution_type: app_store
-      bundle_identifier: com.thep.budgeting
 
     scripts:
       - name: Clean previous generated files
@@ -52,7 +51,6 @@ workflows:
           PLIST="ios/App/App/Info.plist"
           PODFILE="ios/App/Podfile"
 
-          # Update project.pbxproj, Info.plist, and Podfile together
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' "$PBX"
           sed -i '' 's/platform :ios, .*/platform :ios, '\''15.0'\''/g' "$PODFILE"
 
