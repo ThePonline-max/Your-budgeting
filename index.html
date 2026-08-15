@@ -2709,17 +2709,6 @@
                         // Older browsers may not support addEventListener on matchMedia
                     }
                 }
-// DEBUG - remove after testing
-setTimeout(function() {
-    var msg = "Platform: " + (window.Capacitor ? window.Capacitor.getPlatform() : "no cap") + "\n";
-    if (window.Capacitor && window.Capacitor.Plugins) {
-        msg += "Plugins: " + Object.keys(window.Capacitor.Plugins).join(", ");
-    } else {
-        msg += "No plugins found";
-    }
-    msg += "\nNativePurchases: " + (getNativePurchases() ? "YES" : "NO");
-    alert(msg);
-}, 2000);
                 // StoreKit: check entitlement + load live price
                 checkProEntitlement();
                 loadProPrice();
