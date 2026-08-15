@@ -44,6 +44,12 @@ workflows:
       - name: Sync Capacitor and native plugins
         script: |
           npx cap sync ios
+          - name: Add billing permission (Android)
+  script: |
+    if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+      sed -i '' 's/<manifest/<manifest xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+      sed -i '' '/<\/manifest>/i\    <uses-permission android:name="com.android.vending.BILLING" />' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+    fi
 
       - name: Set iOS deployment target to 15 in all project files
         script: |
