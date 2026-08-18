@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#7C3AED">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Your Budgeting</title>
     <style>
         :root {
@@ -51,6 +54,11 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        /* Purple under status bar so it never shows the page background */
+        html {
+            background: #7C3AED;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
@@ -76,21 +84,25 @@
 
         
 
-        /* Header */
+        /* Header – extends under the status bar */
         .header {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 100;
+            /* Cover status bar + 48px toolbar */
             height: calc(env(safe-area-inset-top, 0px) + 48px);
             padding-top: env(safe-area-inset-top, 0px);
             background: linear-gradient(135deg, #7C3AED, #6D28D9);
+            background-color: #7C3AED; /* solid fallback so status bar is never empty */
             color: #fff;
             line-height: 48px;
             text-align: center;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
+            /* Ensure the purple fills the entire safe area including notch */
+            box-sizing: border-box;
         }
 
         .header-btn {
