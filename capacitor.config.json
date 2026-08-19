@@ -5,7 +5,8 @@
   "server": {
     "androidScheme": "https"
     
-    "ios": {
+  },
+  "ios": {
     "scrollEnabled": false,
     "contentInset": "never",
     "allowsLinkPreview": false
@@ -14,7 +15,6 @@
     "iosScheme": "capacitor"
   }
 
-  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
