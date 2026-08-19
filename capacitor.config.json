@@ -3,18 +3,14 @@
   "appName": "Your Budgeting",
   "webDir": "www",
   "server": {
-    "androidScheme": "https"
-    
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
   },
   "ios": {
     "scrollEnabled": false,
     "contentInset": "never",
     "allowsLinkPreview": false
   },
-  "server": {
-    "iosScheme": "capacitor"
-  }
-
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
