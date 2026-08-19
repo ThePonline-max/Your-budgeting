@@ -4,6 +4,16 @@
   "webDir": "www",
   "server": {
     "androidScheme": "https"
+    
+    "ios": {
+    "scrollEnabled": false,
+    "contentInset": "never",
+    "allowsLinkPreview": false
+  },
+  "server": {
+    "iosScheme": "capacitor"
+  }
+
   },
   "plugins": {
     "SplashScreen": {
