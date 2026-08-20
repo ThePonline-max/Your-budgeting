@@ -45,6 +45,35 @@ workflows:
         script: |
           npx cap sync ios
 
+      - name: Replace iOS splash
+        script: |
+          SPLASH_SRC="assets/splash/ios/splash-2732x2732.png"
+          test -f "$SPLASH_SRC"
+
+          DEST="ios/App/App/Assets.xcassets/Splash.imageset"
+          if [ ! -d "$DEST" ]; then
+            echo "Splash.imageset not found. Searching..."
+            find ios/App -name "*Splash*" -o -name "*splash*" 2>/dev/null
+            exit 1
+          fi
+
+          # Remove default Capacitor splash images
+          rm -f "$DEST"/*.png
+
+          # Copy your branded splash (same file under common Capacitor names)
+          cp "$SPLASH_SRC" "$DEST/splash-2732x2732.png"
+          cp "$SPLASH_SRC" "$DEST/splash-2732x2732-1.png"
+          cp "$SPLASH_SRC" "$DEST/splash-2732x2732-2.png"
+
+          # If Contents.json lists different filenames, mirror those too
+          if [ -f "$DEST/Contents.json" ]; then
+            echo "Contents.json:"
+            cat "$DEST/Contents.json"
+          fi
+
+          echo "iOS splash replaced successfully"
+          ls -la "$DEST"
+
       - name: Set iOS deployment target to 15 in all project files
         script: |
           PBX="ios/App/App.xcodeproj/project.pbxproj"
