@@ -1,6 +1,6 @@
 {
   "name": "your-budget",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Your personal budget & expense tracker",
   "main": "index.js",
   "scripts": {
@@ -16,6 +16,9 @@
   },
   "dependencies": {
     "@capacitor/core": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
     "@capgo/native-purchases": "^6.0.0"
   },
   "devDependencies": {
