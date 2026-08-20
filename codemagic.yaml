@@ -88,7 +88,7 @@ workflows:
           BUILD_NUM=$(date +%Y%m%d%H%M)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "$PLIST"
 
-          echo "Version: 1.0.0"
+          echo "Version: 1.0.1"
           echo "Build: $BUILD_NUM"
 
       - name: Pod install
